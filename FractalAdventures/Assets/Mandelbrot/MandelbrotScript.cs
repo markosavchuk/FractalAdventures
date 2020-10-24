@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ComputeShaderScript : MonoBehaviour
+public class MandelbrotScript : MonoBehaviour
 {
     private const int NumberOfThreads = 16;
 

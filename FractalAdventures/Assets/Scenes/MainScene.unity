@@ -135,8 +135,8 @@ GameObject:
   - component: {fileID: 94803685}
   - component: {fileID: 94803684}
   - component: {fileID: 94803683}
-  - component: {fileID: 94803682}
   - component: {fileID: 94803681}
+  - component: {fileID: 94803682}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -181,7 +181,7 @@ MonoBehaviour:
   maxIterations: 5000
   minIterations: 200
   zoomSpeed: 0.7
-  moveSpeed: 0.5
+  moveSpeed: 0.7
   changeColorSpeed: 0.15
   maxWidthZoom: 10
   minWidthZoom: 0.00015
