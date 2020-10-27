@@ -7,36 +7,52 @@ public class MandelbrotScript : MonoBehaviour
 {
     private const int NumberOfThreads = 16;
 
+    private const string FloatKernel = "CSMainFloat";
+    private const string DoubleKernel = "CSMainDouble";
+
+
     [Header("Shader Objects")]
     [SerializeField] private ComputeShader shader;
     [SerializeField] private RawImage image;
     [SerializeField] private Texture2D colorTexture;
 
     [Header("Madelbrot Properties")]
-    [SerializeField] private float width;
-    [SerializeField] private float realStart, imaginaryStart;
+    [SerializeField] private double width;
+    [SerializeField] private double realStart, imaginaryStart;
     [SerializeField] private int iterations, incrementIterations, maxIterations, minIterations;
-    [SerializeField] private float zoomSpeed, moveSpeed, changeColorSpeed;
-    [SerializeField] private float maxWidthZoom, minWidthZoom;
+    [SerializeField] private double zoomSpeed, moveSpeed, changeColorSpeed;
+    [SerializeField] private double maxWidthZoom, minWidthFloatZoom, minWidthDoubleZoom;
 
     [Header("UI Update")]    
     [SerializeField] private Text zoomInfoText;
 
-    private float height;
-    private float zoomDelta;
+    private double height;
+    private double zoomDelta;
 
     private ComputeBuffer buffer;
     private RenderTexture texture;
+
     private int kernelHangle;
 
-    public struct MandelbrotShaderData
+    private bool isFloatKernelActive= true;
+
+    public struct MandelbrotDoubleShaderData
+    {
+        public double width, height, real, imaginary;
+        public int screenWidth, screenHeight;
+        public double time;
+    }
+
+    MandelbrotDoubleShaderData[] mandelbrotDoubleShaderData;
+
+    public struct MandelbrotFloatShaderData
     {
         public float width, height, real, imaginary;
         public int screenWidth, screenHeight;
         public float time;
     }
 
-    MandelbrotShaderData[] mandelbrotShaderdata;
+    MandelbrotFloatShaderData[] mandelbrotFloatShaderData;
 
     private void Start()
     {
@@ -49,7 +65,14 @@ public class MandelbrotScript : MonoBehaviour
     {
         ReadInput();
 
-        mandelbrotShaderdata[0].time = Time.time * changeColorSpeed;
+        if (isFloatKernelActive)
+        {
+            mandelbrotFloatShaderData[0].time = (float)(Time.time * changeColorSpeed);
+        }
+        else
+        {
+            mandelbrotDoubleShaderData[0].time = Time.time * changeColorSpeed;
+        }
 
         UpdateMandelbrot();
     }
@@ -60,8 +83,42 @@ public class MandelbrotScript : MonoBehaviour
         zoomDelta = 1 / width;
         UpdateZoomInfoText();
 
-        mandelbrotShaderdata = new MandelbrotShaderData[1];
-        mandelbrotShaderdata[0] = new MandelbrotShaderData
+        texture = new RenderTexture(Screen.width, Screen.height, 0);
+        texture.enableRandomWrite = true;
+        texture.Create();
+
+        InitFloatKernel();
+    }
+
+    private void InitFloatKernel()
+    {
+        isFloatKernelActive = true;
+
+        mandelbrotFloatShaderData = new MandelbrotFloatShaderData[1];
+        mandelbrotFloatShaderData[0] = new MandelbrotFloatShaderData
+        {
+            width = (float)width,
+            height = (float)height,
+            real = (float)realStart,
+            imaginary = (float)imaginaryStart,
+            screenWidth = Screen.width,
+            screenHeight = Screen.height
+        };
+
+        buffer = new ComputeBuffer(mandelbrotFloatShaderData.Length, 28);
+
+        kernelHangle = shader.FindKernel(FloatKernel);
+
+        shader.SetTexture(kernelHangle, "Result", texture);
+        shader.SetTexture(kernelHangle, "ColorTexture", colorTexture);
+    }
+
+    private void InitDoubleKernel()
+    {
+        isFloatKernelActive = false;
+
+        mandelbrotDoubleShaderData = new MandelbrotDoubleShaderData[1];
+        mandelbrotDoubleShaderData[0] = new MandelbrotDoubleShaderData
         {
             width = width,
             height = height,
@@ -71,12 +128,9 @@ public class MandelbrotScript : MonoBehaviour
             screenHeight = Screen.height
         };
 
-        buffer = new ComputeBuffer(mandelbrotShaderdata.Length, 28);
-        texture = new RenderTexture(Screen.width, Screen.height, 0);
-        texture.enableRandomWrite = true;
-        texture.Create();
+        buffer = new ComputeBuffer(mandelbrotFloatShaderData.Length, 48);
 
-        kernelHangle = shader.FindKernel("CSMain");
+        kernelHangle = shader.FindKernel(DoubleKernel);
 
         shader.SetTexture(kernelHangle, "Result", texture);
         shader.SetTexture(kernelHangle, "ColorTexture", colorTexture);
@@ -84,8 +138,16 @@ public class MandelbrotScript : MonoBehaviour
 
     private void UpdateMandelbrot()
     {
-        buffer.SetData(mandelbrotShaderdata);
-        shader.SetBuffer(kernelHangle, "buffer", buffer);
+        if (isFloatKernelActive)
+        {
+            buffer.SetData(mandelbrotFloatShaderData);
+        }
+        else
+        {
+            buffer.SetData(mandelbrotDoubleShaderData);
+        }
+
+        shader.SetBuffer(kernelHangle, isFloatKernelActive ? "bufferFloat" : "bufferDouble", buffer);
         shader.SetInt("maxIteration", iterations);
 
         shader.Dispatch(kernelHangle, Screen.width / NumberOfThreads, Screen.height / NumberOfThreads, 1);
@@ -119,17 +181,44 @@ public class MandelbrotScript : MonoBehaviour
         realStart += horizon * speed;
         imaginaryStart += vertical * speed;
 
-        mandelbrotShaderdata[0].real = realStart;
-        mandelbrotShaderdata[0].imaginary = imaginaryStart;
+        if (isFloatKernelActive)
+        {
+            mandelbrotFloatShaderData[0].real = (float)realStart;
+            mandelbrotFloatShaderData[0].imaginary = (float)imaginaryStart;
+        }
+        else
+        {
+            mandelbrotDoubleShaderData[0].real = realStart;
+            mandelbrotDoubleShaderData[0].imaginary = imaginaryStart;
+        }
 
         return;
     }
 
     private void Zoom(bool zoomIn)
     {
-        if ((zoomIn && width < minWidthZoom) || (!zoomIn && width > maxWidthZoom))
+        if (isFloatKernelActive)
         {
-            return;
+            if (!zoomIn && width > maxWidthZoom)
+            {
+                return;
+            }
+            else if (zoomIn && width < minWidthFloatZoom && CanUseDoubleInShader())
+            {
+                InitDoubleKernel();
+            }
+        }      
+        
+        if (!isFloatKernelActive)
+        {
+            if (zoomIn && width < minWidthDoubleZoom)
+            {
+                return;
+            }
+            else if (!zoomIn && width > minWidthFloatZoom)
+            {
+                InitFloatKernel();
+            }
         }
 
         UpdateZoomInfoText();
@@ -142,29 +231,45 @@ public class MandelbrotScript : MonoBehaviour
             iterations = newIterations;
         }
 
-        float wFactor = width * zoomSpeed * Time.deltaTime;
-        float hFactor = height * zoomSpeed * Time.deltaTime;        
+        double wFactor = width * zoomSpeed * Time.deltaTime;
+        double hFactor = height * zoomSpeed * Time.deltaTime;        
 
         width -= wFactor * factor;
         height -= hFactor * factor;
         realStart += wFactor / 2.0f * factor;
         imaginaryStart += hFactor / 2.0f * factor;
-        
-        mandelbrotShaderdata[0].width = width;
-        mandelbrotShaderdata[0].height = height;
-        mandelbrotShaderdata[0].real = realStart;
-        mandelbrotShaderdata[0].imaginary = imaginaryStart;
+
+        if (isFloatKernelActive)
+        {
+            mandelbrotFloatShaderData[0].width = (float)width;
+            mandelbrotFloatShaderData[0].height = (float)height;
+            mandelbrotFloatShaderData[0].real = (float)realStart;
+            mandelbrotFloatShaderData[0].imaginary = (float)imaginaryStart;
+        }
+        else
+        {
+            mandelbrotDoubleShaderData[0].width = width;
+            mandelbrotDoubleShaderData[0].height = height;
+            mandelbrotDoubleShaderData[0].real = realStart;
+            mandelbrotDoubleShaderData[0].imaginary = imaginaryStart;
+        }
 
         return;
     }
 
     private void OnDestroy()
     {
-        buffer.Dispose();
+        buffer?.Dispose();
     }
 
     private void UpdateZoomInfoText()
     {
-        zoomInfoText.text = $"Zoom: {string.Format("{0:0.#}", 1 / width / zoomDelta)}";
+        var zoom = 1 / width / zoomDelta;
+        zoomInfoText.text = $"Zoom: {string.Format(zoom < 10 ? "{0:0.#}" : "{0:0}", 1 / width / zoomDelta)}";
+    }
+
+    private bool CanUseDoubleInShader()
+    {
+        return SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Metal;
     }
 }
