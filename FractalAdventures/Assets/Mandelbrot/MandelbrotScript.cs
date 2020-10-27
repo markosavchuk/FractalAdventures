@@ -203,9 +203,16 @@ public class MandelbrotScript : MonoBehaviour
             {
                 return;
             }
-            else if (zoomIn && width < minWidthFloatZoom && CanUseDoubleInShader())
+            else if (zoomIn && width < minWidthFloatZoom)
             {
-                InitDoubleKernel();
+                if (CanUseDoubleInShader())
+                {
+                    InitDoubleKernel();
+                }
+                else
+                {
+                    return;
+                }
             }
         }      
         

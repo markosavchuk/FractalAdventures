@@ -184,7 +184,8 @@ MonoBehaviour:
   moveSpeed: 0.7
   changeColorSpeed: 0.15
   maxWidthZoom: 10
-  minWidthZoom: 0.00015
+  minWidthFloatZoom: 0.00015
+  minWidthDoubleZoom: 0.000000000001
   zoomInfoText: {fileID: 803565526}
 --- !u!114 &94803683
 MonoBehaviour:
