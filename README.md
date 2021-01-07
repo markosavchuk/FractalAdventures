@@ -2,11 +2,11 @@
 
 <b>Mandelbrot set</b> implementation with animated colors using <b>Compute shaders</b> for Mac (Metal) and Windows (DirectX). Multithreading advantage of compute shaders provides excellent performance.
 
-![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots1.png)
+![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots4.png)
 
-![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots2.png)
+![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots5.png)
 
-![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots3.png)
+![Screenshots1](https://github.com/markosavchuk/FractalAdventures/blob/main/FractalAdventures/Screenshots/Screenshots6.png)
 
 ### The floating point problem
 
